@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Demo Vektor, Cross Product & Normalisasi</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4fbff;
+    color: #2c3e50;
+    margin: 0;
+    display: flex;
+    height: 100vh;
+}
+#panel {
+    width: 280px;
+    padding: 15px;
+    background: #ffffff;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+}
+label {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+}
+input {
+    width: 80px;
+}
+canvas {
+    flex: 1;
+    background: #eef6ff;
+}
+</style>
+</head>
+<body>
+
+<div id="panel">
+    <h3>Input Vektor</h3>
+
+    <label>Vektor A</label>
+    x <input id="ax" type="number" value="100">
+    y <input id="ay" type="number" value="0">
+    z <input id="az" type="number" value="0">
+
+    <label>Vektor B</label>
+    x <input id="bx" type="number" value="0">
+    y <input id="by" type="number" value="100">
+    z <input id="bz" type="number" value="0">
+
+    <label>
+        <input id="normalize" type="checkbox">
+        Normalisasi vektor normal
+    </label>
+
+    <p style="font-size:12px">
+        🔹 Drag ujung vektor A (merah) dan B (biru)<br>
+        🔹 Hijau = cross product (normal)
+    </p>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+    canvas.width = window.innerWidth - 280;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+const origin = { x: canvas.width / 2, y: canvas.height / 2 };
+const scale = 1;
+
+let vecA = { x: 100, y: 0, z: 0 };
+let vecB = { x: 0, y: 100, z: 0 };
+
+const inputs = ["ax","ay","az","bx","by","bz"];
+inputs.forEach(id => {
+    document.getElementById(id).addEventListener("input", () => {
+        vecA.x = +ax.value;
+        vecA.y = +ay.value;
+        vecA.z = +az.value;
+        vecB.x = +bx.value;
+        vecB.y = +by.value;
+        vecB.z = +bz.value;
+    });
+});
+
+function isoProject(v) {
+    return {
+        x: origin.x + (v.x - v.y) * 0.7,
+        y: origin.y + (v.x + v.y) * 0.35 - v.z
+    };
+}
+
+function cross(a, b) {
+    return {
+        x: a.y * b.z - a.z * b.y,
+        y: a.z * b.x - a.x * b.z,
+        z: a.x * b.y - a.y * b.x
+    };
+}
+
+function normalize(v) {
+    const len = Math.hypot(v.x, v.y, v.z);
+    if (len === 0) return v;
+    return { x: v.x / len * 120, y: v.y / len * 120, z: v.z / len * 120 };
+}
+
+let dragging = null;
+
+canvas.addEventListener("mousedown", e => {
+    const m = { x: e.offsetX, y: e.offsetY };
+    const pA = isoProject(vecA);
+    const pB = isoProject(vecB);
+
+    if (Math.hypot(m.x - pA.x, m.y - pA.y) < 10) dragging = "A";
+    if (Math.hypot(m.x - pB.x, m.y - pB.y) < 10) dragging = "B";
+});
+
+canvas.addEventListener("mouseup", () => dragging = null);
+
+canvas.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    const dx = e.movementX;
+    const dy = e.movementY;
+
+    if (dragging === "A") {
+        vecA.x += dx;
+        vecA.y -= dx;
+        vecA.z -= dy;
+    }
+    if (dragging === "B") {
+        vecB.x += dx;
+        vecB.y -= dx;
+        vecB.z -= dy;
+    }
+
+    ax.value = Math.round(vecA.x);
+    ay.value = Math.round(vecA.y);
+    az.value = Math.round(vecA.z);
+    bx.value = Math.round(vecB.x);
+    by.value = Math.round(vecB.y);
+    bz.value = Math.round(vecB.z);
+});
+
+function drawVector(v, color) {
+    const p = isoProject(v);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(origin.x, origin.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawTriangle(a, b) {
+    const pA = isoProject(a);
+    const pB = isoProject(b);
+
+    ctx.fillStyle = "rgba(100,150,255,0.25)";
+    ctx.beginPath();
+    ctx.moveTo(origin.x, origin.y);
+    ctx.lineTo(pA.x, pA.y);
+    ctx.lineTo(pB.x, pB.y);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawTriangle(vecA, vecB);
+
+    drawVector(vecA, "red");
+    drawVector(vecB, "blue");
+
+    let normal = cross(vecA, vecB);
+    if (normalizeCheckbox.checked) normal = normalize(normal);
+
+    drawVector(normal, "green");
+
+    requestAnimationFrame(draw);
+}
+
+const normalizeCheckbox = document.getElementById("normalize");
+draw();
+</script>
+
+</body>
+</html>
